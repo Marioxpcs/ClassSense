@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "ClassSense",
+    "slug": "classsense",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./src/assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./src/assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#007AFF"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.classsense.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./src/assets/adaptive-icon.png",
+        "backgroundColor": "#007AFF"
+      },
+      "package": "com.classsense.app"
+    },
+    "web": {
+      "favicon": "./src/assets/favicon.png"
+    }
+  }
+}
