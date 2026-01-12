@@ -1,41 +1,31 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import AttendanceToggle from '../components/AttendanceToggle';
-
-interface AttendanceRecord {
-  id: string;
-  classId: string;
-  className: string;
-  date: Date;
-  status: 'present' | 'absent' | 'excused';
-}
+import { attendanceRecords, courses } from '../utils/seedData';
 
 const AttendanceLogScreen: React.FC = () => {
-  const mockAttendance: AttendanceRecord[] = [
-    {
-      id: '1',
-      classId: '1',
-      className: 'CS101',
-      date: new Date(2024, 0, 15),
-      status: 'present',
-    },
-    {
-      id: '2',
-      classId: '1',
-      className: 'CS101',
-      date: new Date(2024, 0, 17),
-      status: 'present',
-    },
-    {
-      id: '3',
-      classId: '2',
-      className: 'MATH201',
-      date: new Date(2024, 0, 16),
-      status: 'absent',
-    },
-  ];
+  const attendanceWithCourse = useMemo(() => {
+    return attendanceRecords.map((record) => {
+      const course = courses.find((item) => item.id === record.courseId);
+      return {
+        ...record,
+        className: course?.code ?? course?.name ?? 'Course',
+      };
+    });
+  }, []);
 
-  const handleStatusChange = (id: string, status: 'present' | 'absent' | 'excused') => {
+  const stats = useMemo(() => {
+    const total = attendanceRecords.length;
+    const attended = attendanceRecords.filter((record) => record.status === 'attended').length;
+    const missed = attendanceRecords.filter((record) => record.status === 'missed').length;
+    const rate = total > 0 ? Math.round((attended / total) * 100) : 100;
+    return { total, attended, missed, rate };
+  }, []);
+
+  const handleStatusChange = (
+    id: string,
+    status: 'attended' | 'missed' | 'late' | 'recording'
+  ) => {
     console.log(`Attendance ${id} changed to ${status}`);
   };
 
@@ -46,20 +36,20 @@ const AttendanceLogScreen: React.FC = () => {
       </View>
       <View style={styles.statsContainer}>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>95%</Text>
+          <Text style={styles.statValue}>{stats.rate}%</Text>
           <Text style={styles.statLabel}>Overall Rate</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>38</Text>
-          <Text style={styles.statLabel}>Present</Text>
+          <Text style={styles.statValue}>{stats.attended}</Text>
+          <Text style={styles.statLabel}>Attended</Text>
         </View>
         <View style={styles.statBox}>
-          <Text style={styles.statValue}>2</Text>
-          <Text style={styles.statLabel}>Absent</Text>
+          <Text style={styles.statValue}>{stats.missed}</Text>
+          <Text style={styles.statLabel}>Missed</Text>
         </View>
       </View>
       <FlatList
-        data={mockAttendance}
+        data={attendanceWithCourse}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <View style={styles.attendanceItem}>

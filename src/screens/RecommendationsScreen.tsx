@@ -1,44 +1,24 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
 import PriorityBadge from '../components/PriorityBadge';
-
-interface Recommendation {
-  id: string;
-  title: string;
-  description: string;
-  priority: number;
-  category: 'attendance' | 'grades' | 'schedule' | 'general';
-}
+import recommendationService from '../services/recommendationService';
+import { attendanceRecords, courses, evaluations, sessions } from '../utils/seedData';
 
 const RecommendationsScreen: React.FC = () => {
-  const mockRecommendations: Recommendation[] = [
-    {
-      id: '1',
-      title: 'Attend CS101 this week',
-      description: 'Your attendance in CS101 has dropped to 85%. Consider attending all remaining sessions to maintain a good standing.',
-      priority: 75,
-      category: 'attendance',
-    },
-    {
-      id: '2',
-      title: 'Study for MATH201 Midterm',
-      description: 'The midterm is approaching in 5 days. Based on your current performance, dedicate extra study time.',
-      priority: 90,
-      category: 'grades',
-    },
-    {
-      id: '3',
-      title: 'Start Final Project Early',
-      description: 'The final project is worth 40% of your grade. Starting early will help you achieve better results.',
-      priority: 60,
-      category: 'schedule',
-    },
-  ];
+  const recommendations = useMemo(() => {
+    return recommendationService.generateRecommendations({
+      courses,
+      sessions,
+      evaluations,
+      attendance: attendanceRecords,
+      goal: 'A',
+    });
+  }, []);
 
   const getCategoryColor = (category: string): string => {
     switch (category) {
       case 'attendance': return '#5856D6';
-      case 'grades': return '#FF3B30';
+      case 'evaluations': return '#FF3B30';
       case 'schedule': return '#FF9500';
       default: return '#007AFF';
     }
@@ -51,7 +31,7 @@ const RecommendationsScreen: React.FC = () => {
         <Text style={styles.subtitle}>Personalized insights for success</Text>
       </View>
       <ScrollView style={styles.content}>
-        {mockRecommendations.map((rec) => (
+        {recommendations.map((rec) => (
           <View key={rec.id} style={styles.recommendationCard}>
             <View style={styles.cardHeader}>
               <View style={styles.headerLeft}>
@@ -69,7 +49,8 @@ const RecommendationsScreen: React.FC = () => {
               <PriorityBadge priority={rec.priority} size="small" />
             </View>
             <Text style={styles.cardTitle}>{rec.title}</Text>
-            <Text style={styles.cardDescription}>{rec.description}</Text>
+            <Text style={styles.cardDescription}>{rec.reason}</Text>
+            <Text style={styles.cardAction}>{rec.action}</Text>
           </View>
         ))}
       </ScrollView>
@@ -141,6 +122,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     lineHeight: 20,
+  },
+  cardAction: {
+    fontSize: 13,
+    color: '#333',
+    marginTop: 8,
+    fontWeight: '600',
   },
 });
 

@@ -3,18 +3,20 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 interface AttendanceToggleProps {
   date: Date;
-  initialStatus?: 'present' | 'absent' | 'excused';
-  onStatusChange?: (status: 'present' | 'absent' | 'excused') => void;
+  initialStatus?: 'attended' | 'missed' | 'late' | 'recording';
+  onStatusChange?: (status: 'attended' | 'missed' | 'late' | 'recording') => void;
 }
 
 const AttendanceToggle: React.FC<AttendanceToggleProps> = ({
   date,
-  initialStatus = 'present',
+  initialStatus = 'attended',
   onStatusChange,
 }) => {
-  const [status, setStatus] = useState<'present' | 'absent' | 'excused'>(initialStatus);
+  const [status, setStatus] = useState<'attended' | 'missed' | 'late' | 'recording'>(
+    initialStatus
+  );
 
-  const handlePress = (newStatus: 'present' | 'absent' | 'excused') => {
+  const handlePress = (newStatus: 'attended' | 'missed' | 'late' | 'recording') => {
     setStatus(newStatus);
     onStatusChange?.(newStatus);
   };
@@ -28,43 +30,57 @@ const AttendanceToggle: React.FC<AttendanceToggleProps> = ({
         <TouchableOpacity
           style={[
             styles.button,
-            status === 'present' && styles.presentButton,
+            status === 'attended' && styles.attendedButton,
           ]}
-          onPress={() => handlePress('present')}
+          onPress={() => handlePress('attended')}
         >
           <Text style={[
             styles.buttonText,
-            status === 'present' && styles.activeText,
+            status === 'attended' && styles.activeText,
           ]}>
-            Present
+            Attended
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.button,
-            status === 'absent' && styles.absentButton,
+            status === 'missed' && styles.missedButton,
           ]}
-          onPress={() => handlePress('absent')}
+          onPress={() => handlePress('missed')}
         >
           <Text style={[
             styles.buttonText,
-            status === 'absent' && styles.activeText,
+            status === 'missed' && styles.activeText,
           ]}>
-            Absent
+            Missed
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
           style={[
             styles.button,
-            status === 'excused' && styles.excusedButton,
+            status === 'late' && styles.lateButton,
           ]}
-          onPress={() => handlePress('excused')}
+          onPress={() => handlePress('late')}
         >
           <Text style={[
             styles.buttonText,
-            status === 'excused' && styles.activeText,
+            status === 'late' && styles.activeText,
           ]}>
-            Excused
+            Late
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[
+            styles.button,
+            status === 'recording' && styles.recordingButton,
+          ]}
+          onPress={() => handlePress('recording')}
+        >
+          <Text style={[
+            styles.buttonText,
+            status === 'recording' && styles.activeText,
+          ]}>
+            Recording
           </Text>
         </TouchableOpacity>
       </View>
@@ -100,17 +116,21 @@ const styles = StyleSheet.create({
     borderColor: '#ddd',
     backgroundColor: '#f5f5f5',
   },
-  presentButton: {
+  attendedButton: {
     backgroundColor: '#34C759',
     borderColor: '#34C759',
   },
-  absentButton: {
+  missedButton: {
     backgroundColor: '#FF3B30',
     borderColor: '#FF3B30',
   },
-  excusedButton: {
+  lateButton: {
     backgroundColor: '#FF9500',
     borderColor: '#FF9500',
+  },
+  recordingButton: {
+    backgroundColor: '#5856D6',
+    borderColor: '#5856D6',
   },
   buttonText: {
     fontSize: 12,

@@ -1,113 +1,156 @@
-import { Class } from '../context/ClassContext';
-import { AttendanceRecord } from '../context/AttendanceContext';
-import { Evaluation } from '../context/EvaluationContext';
-
-interface PriorityFactors {
-  attendanceWeight: number;
-  gradeWeight: number;
-  deadlineWeight: number;
-  creditWeight: number;
-}
+import {
+  AttendanceRecord,
+  ClassSession,
+  Course,
+  Evaluation,
+  PriorityResult,
+  TopicType,
+} from '../types/DomainTypes';
 
 class ScoringService {
-  private defaultWeights: PriorityFactors = {
-    attendanceWeight: 0.25,
-    gradeWeight: 0.4,
-    deadlineWeight: 0.25,
-    creditWeight: 0.1,
+  private topicBaseScores: Record<TopicType, number> = {
+    NEW: 8,
+    EXTENSIVE: 9,
+    LIGHT: 4,
+    CONTINUATION: 5,
   };
 
   calculatePriorityScore(
-    classItem: Class,
-    attendance: AttendanceRecord[],
-    evaluations: Evaluation[]
-  ): number {
-    const attendanceScore = this.calculateAttendanceScore(classItem.id, attendance);
-    const gradeScore = this.calculateGradeScore(classItem.id, evaluations);
-    const deadlineScore = this.calculateDeadlineScore(classItem.id, evaluations);
-    const creditScore = this.calculateCreditScore(classItem.credits);
-
-    const totalScore =
-      attendanceScore * this.defaultWeights.attendanceWeight +
-      gradeScore * this.defaultWeights.gradeWeight +
-      deadlineScore * this.defaultWeights.deadlineWeight +
-      creditScore * this.defaultWeights.creditWeight;
-
-    return Math.round(totalScore);
-  }
-
-  private calculateAttendanceScore(
-    classId: string,
+    session: ClassSession,
+    course: Course,
+    evaluations: Evaluation[],
     attendance: AttendanceRecord[]
-  ): number {
-    const classAttendance = attendance.filter((record) => record.classId === classId);
-    if (classAttendance.length === 0) return 50;
-
-    const presentCount = classAttendance.filter(
-      (record) => record.status === 'present' || record.status === 'excused'
-    ).length;
-    const rate = (presentCount / classAttendance.length) * 100;
-
-    // Lower attendance = higher priority
-    return 100 - rate;
-  }
-
-  private calculateGradeScore(classId: string, evaluations: Evaluation[]): number {
-    const classEvals = evaluations.filter((eval) => eval.classId === classId);
-    const gradedEvals = classEvals.filter(
-      (eval) => eval.score !== undefined && eval.maxScore !== undefined
+  ): PriorityResult {
+    const topicImportance = this.topicBaseScores[session.topic.topicType];
+    const difficulty = session.topic.estimatedDifficulty * 1.2;
+    const evaluationProximity = this.calculateEvaluationProximity(
+      session.date,
+      evaluations
     );
+    const evaluationWeightDensity = this.calculateEvaluationWeightDensity(evaluations);
+    const attendanceRisk = this.calculateAttendanceRisk(attendance);
+    const overrideMultiplier = course.courseImportanceOverride ?? 1;
 
-    if (gradedEvals.length === 0) return 50;
+    const rawScore =
+      topicImportance +
+      difficulty +
+      evaluationProximity +
+      evaluationWeightDensity +
+      attendanceRisk;
+    const finalScore = Math.round(rawScore * overrideMultiplier);
 
-    let totalWeightedScore = 0;
-    let totalWeight = 0;
-
-    gradedEvals.forEach((eval) => {
-      const percentage = ((eval.score ?? 0) / (eval.maxScore ?? 1)) * 100;
-      totalWeightedScore += percentage * eval.weight;
-      totalWeight += eval.weight;
+    const reasons = this.buildReasons({
+      session,
+      evaluationProximity,
+      evaluationWeightDensity,
+      attendanceRisk,
+      overrideMultiplier,
     });
 
-    const currentGrade = totalWeight > 0 ? totalWeightedScore / totalWeight : 0;
-
-    // Lower grade = higher priority
-    return 100 - currentGrade;
+    return {
+      score: finalScore,
+      breakdown: {
+        topicImportance,
+        difficulty,
+        evaluationProximity,
+        evaluationWeightDensity,
+        attendanceRisk,
+        overrideMultiplier,
+        finalScore,
+      },
+      reasons,
+    };
   }
 
-  private calculateDeadlineScore(classId: string, evaluations: Evaluation[]): number {
-    const classEvals = evaluations.filter((eval) => eval.classId === classId);
-    const upcomingEvals = classEvals.filter((eval) => eval.date > new Date());
+  private calculateEvaluationProximity(
+    sessionDate: Date,
+    evaluations: Evaluation[]
+  ): number {
+    const upcoming = evaluations.filter((evaluation) => evaluation.dueDate >= sessionDate);
+    if (upcoming.length === 0) return 0;
 
-    if (upcomingEvals.length === 0) return 0;
-
-    // Find nearest deadline
-    const nearestDeadline = upcomingEvals.reduce((nearest, eval) =>
-      eval.date < nearest.date ? eval : nearest
+    const nearest = upcoming.reduce((closest, evaluation) =>
+      evaluation.dueDate < closest.dueDate ? evaluation : closest
+    );
+    const daysUntil = Math.ceil(
+      (nearest.dueDate.getTime() - sessionDate.getTime()) / (1000 * 60 * 60 * 24)
     );
 
-    const daysUntilDeadline = Math.ceil(
-      (nearestDeadline.date.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+    if (daysUntil <= 2) return 8;
+    if (daysUntil <= 7) return 6;
+    if (daysUntil <= 14) return 3;
+    return 0;
+  }
+
+  private calculateEvaluationWeightDensity(evaluations: Evaluation[]): number {
+    if (evaluations.length === 0) return 0;
+
+    const maxWeight = Math.max(...evaluations.map((evaluation) => evaluation.weightPercent));
+    const remainingWeight = evaluations
+      .filter((evaluation) => evaluation.status !== 'completed')
+      .reduce((total, evaluation) => total + evaluation.weightPercent, 0);
+
+    if (maxWeight >= 30) return 4;
+    if (remainingWeight >= 50) return 2;
+    return 0;
+  }
+
+  private calculateAttendanceRisk(attendance: AttendanceRecord[]): number {
+    if (attendance.length === 0) return 0;
+
+    const recent = [...attendance]
+      .sort((a, b) => b.date.getTime() - a.date.getTime())
+      .slice(0, 5);
+
+    const missedCount = recent.filter((record) => record.status === 'missed').length;
+
+    if (missedCount >= 3) return 6;
+    if (missedCount >= 2) return 4;
+    if (missedCount >= 1) return 2;
+    return 0;
+  }
+
+  private buildReasons({
+    session,
+    evaluationProximity,
+    evaluationWeightDensity,
+    attendanceRisk,
+    overrideMultiplier,
+  }: {
+    session: ClassSession;
+    evaluationProximity: number;
+    evaluationWeightDensity: number;
+    attendanceRisk: number;
+    overrideMultiplier: number;
+  }): string[] {
+    const reasons: string[] = [];
+
+    reasons.push(
+      `${session.topic.topicType} topic: ${this.topicBaseScores[session.topic.topicType]} pts`
+    );
+    reasons.push(
+      `Difficulty ${session.topic.estimatedDifficulty}/5 → ${(
+        session.topic.estimatedDifficulty * 1.2
+      ).toFixed(1)} pts`
     );
 
-    // Closer deadline = higher priority
-    if (daysUntilDeadline <= 3) return 100;
-    if (daysUntilDeadline <= 7) return 75;
-    if (daysUntilDeadline <= 14) return 50;
-    return 25;
-  }
+    if (evaluationProximity > 0) {
+      reasons.push(`Evaluation due soon (+${evaluationProximity})`);
+    }
 
-  private calculateCreditScore(credits: number): number {
-    // More credits = slightly higher priority
-    return Math.min((credits / 4) * 100, 100);
-  }
+    if (evaluationWeightDensity > 0) {
+      reasons.push(`High weight density (+${evaluationWeightDensity})`);
+    }
 
-  updateWeights(newWeights: Partial<PriorityFactors>): void {
-    this.defaultWeights = { ...this.defaultWeights, ...newWeights };
-  }
+    if (attendanceRisk > 0) {
+      reasons.push(`Recent misses raise risk (+${attendanceRisk})`);
+    }
 
-  getWeights(): PriorityFactors {
-    return { ...this.defaultWeights };
+    if (overrideMultiplier !== 1) {
+      reasons.push(`Course priority override ×${overrideMultiplier.toFixed(2)}`);
+    }
+
+    return reasons;
   }
 }
 

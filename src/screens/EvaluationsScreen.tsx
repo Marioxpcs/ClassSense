@@ -1,54 +1,34 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import EvaluationItem from '../components/EvaluationItem';
-
-interface Evaluation {
-  id: string;
-  title: string;
-  type: 'exam' | 'assignment' | 'project' | 'quiz';
-  date: Date;
-  weight: number;
-  score?: number;
-  maxScore?: number;
-}
+import { evaluations } from '../utils/seedData';
+import { getLetterGrade } from '../types/EvaluationTypes';
 
 const EvaluationsScreen: React.FC = () => {
-  const mockEvaluations: Evaluation[] = [
-    {
-      id: '1',
-      title: 'Midterm Exam',
-      type: 'exam',
-      date: new Date(2024, 2, 15),
-      weight: 30,
-      score: 85,
-      maxScore: 100,
-    },
-    {
-      id: '2',
-      title: 'Homework 1',
-      type: 'assignment',
-      date: new Date(2024, 1, 10),
-      weight: 10,
-      score: 95,
-      maxScore: 100,
-    },
-    {
-      id: '3',
-      title: 'Final Project',
-      type: 'project',
-      date: new Date(2024, 4, 1),
-      weight: 40,
-    },
-    {
-      id: '4',
-      title: 'Quiz 1',
-      type: 'quiz',
-      date: new Date(2024, 1, 20),
-      weight: 5,
-      score: 18,
-      maxScore: 20,
-    },
-  ];
+  const summary = useMemo(() => {
+    const completed = evaluations.filter((evaluation) => evaluation.status === 'completed');
+    if (completed.length === 0) {
+      return { currentGrade: 0, letterGrade: 'N/A' };
+    }
+
+    const totalWeight = completed.reduce(
+      (total, evaluation) => total + evaluation.weightPercent,
+      0
+    );
+    const weightedScore = completed.reduce(
+      (total, evaluation) =>
+        total + (evaluation.gradeReceived ?? 0) * evaluation.weightPercent,
+      0
+    );
+    const currentGrade = totalWeight > 0 ? weightedScore / totalWeight : 0;
+
+    return {
+      currentGrade: Math.round(currentGrade * 10) / 10,
+      letterGrade: getLetterGrade(currentGrade),
+    };
+  }, []);
+
+  const highImpact = evaluations.filter((evaluation) => evaluation.weightPercent >= 20);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -57,21 +37,43 @@ const EvaluationsScreen: React.FC = () => {
       </View>
       <View style={styles.summary}>
         <Text style={styles.summaryTitle}>Current Grade</Text>
-        <Text style={styles.currentGrade}>88.5%</Text>
-        <Text style={styles.letterGrade}>B+</Text>
+        <Text style={styles.currentGrade}>{summary.currentGrade}%</Text>
+        <Text style={styles.letterGrade}>{summary.letterGrade}</Text>
+      </View>
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>High Impact</Text>
       </View>
       <FlatList
-        data={mockEvaluations}
+        data={highImpact}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <EvaluationItem
             id={item.id}
             title={item.title}
             type={item.type}
-            date={item.date}
-            weight={item.weight}
-            score={item.score}
-            maxScore={item.maxScore}
+            dueDate={item.dueDate}
+            weightPercent={item.weightPercent}
+            status={item.status}
+            gradeReceived={item.gradeReceived}
+          />
+        )}
+        contentContainerStyle={styles.list}
+      />
+      <View style={styles.sectionHeader}>
+        <Text style={styles.sectionTitle}>All Evaluations</Text>
+      </View>
+      <FlatList
+        data={evaluations}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <EvaluationItem
+            id={item.id}
+            title={item.title}
+            type={item.type}
+            dueDate={item.dueDate}
+            weightPercent={item.weightPercent}
+            status={item.status}
+            gradeReceived={item.gradeReceived}
           />
         )}
         contentContainerStyle={styles.list}
@@ -117,6 +119,16 @@ const styles = StyleSheet.create({
   },
   list: {
     padding: 16,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 4,
+  },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
   },
 });
 
