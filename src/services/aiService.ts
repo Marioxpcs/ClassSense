@@ -1,6 +1,4 @@
-import { Class } from '../context/ClassContext';
-import { AttendanceRecord } from '../context/AttendanceContext';
-import { Evaluation } from '../context/EvaluationContext';
+import { AttendanceRecord, Course, Evaluation } from '../types/DomainTypes';
 
 export interface Recommendation {
   id: string;
@@ -12,7 +10,7 @@ export interface Recommendation {
 
 class AIService {
   async generateRecommendations(
-    classes: Class[],
+    classes: Course[],
     attendance: AttendanceRecord[],
     evaluations: Evaluation[]
   ): Promise<Recommendation[]> {
@@ -27,7 +25,7 @@ class AIService {
       );
       const attendanceRate =
         classAttendance.length > 0
-          ? (classAttendance.filter((r) => r.status === 'present').length /
+          ? (classAttendance.filter((r) => r.status === 'attended').length /
               classAttendance.length) *
             100
           : 100;
@@ -35,7 +33,7 @@ class AIService {
       if (attendanceRate < 90) {
         recommendations.push({
           id: `attendance-${classItem.id}`,
-          title: `Improve attendance in ${classItem.code}`,
+          title: `Improve attendance in ${classItem.code ?? classItem.name}`,
           description: `Your attendance is at ${attendanceRate.toFixed(1)}%. Consider attending more classes.`,
           priority: 100 - attendanceRate,
           category: 'attendance',
@@ -58,7 +56,7 @@ class AIService {
 
   async analyzStudyPatterns(
     userId: string,
-    classes: Class[]
+    classes: Course[]
   ): Promise<Record<string, any>> {
     // Placeholder for study pattern analysis
     return {

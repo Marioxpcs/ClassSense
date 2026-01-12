@@ -1,35 +1,57 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import PriorityBadge from './PriorityBadge';
 
 interface ClassCardProps {
   id: string;
   name: string;
   code: string;
   instructor: string;
-  credits: number;
+  timeLabel: string;
+  location: string;
   priority?: number;
+  reasons?: string[];
   onPress?: () => void;
+  onPressBreakdown?: () => void;
 }
 
 const ClassCard: React.FC<ClassCardProps> = ({
   name,
   code,
   instructor,
-  credits,
+  timeLabel,
+  location,
   priority,
+  reasons,
   onPress,
+  onPressBreakdown,
 }) => {
   return (
     <TouchableOpacity style={styles.container} onPress={onPress}>
       <View style={styles.header}>
-        <Text style={styles.className}>{name}</Text>
-        <Text style={styles.classCode}>{code}</Text>
+        <View style={styles.titleGroup}>
+          <Text style={styles.className}>{name}</Text>
+          <Text style={styles.classCode}>{code}</Text>
+        </View>
+        {priority !== undefined && <PriorityBadge priority={priority} size="small" />}
       </View>
       <Text style={styles.instructor}>{instructor}</Text>
-      <View style={styles.footer}>
-        <Text style={styles.credits}>{credits} Credits</Text>
-        {priority && <Text style={styles.priority}>Priority: {priority}</Text>}
-      </View>
+      <Text style={styles.meta}>{timeLabel}</Text>
+      <Text style={styles.meta}>{location}</Text>
+      {reasons && reasons.length > 0 && (
+        <View style={styles.reasonList}>
+          {reasons.map((reason) => (
+            <Text key={reason} style={styles.reasonItem}>
+              • {reason}
+            </Text>
+          ))}
+        </View>
+      )}
+      {onPressBreakdown && (
+        <TouchableOpacity style={styles.breakdownButton} onPress={onPressBreakdown}>
+          <Text style={styles.breakdownText}>View score breakdown</Text>
+        </TouchableOpacity>
+      )}
     </TouchableOpacity>
   );
 };
@@ -52,6 +74,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  titleGroup: {
+    flex: 1,
+    marginRight: 12,
+  },
   className: {
     fontSize: 18,
     fontWeight: 'bold',
@@ -66,15 +92,23 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
-  footer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  credits: {
+  meta: {
     fontSize: 12,
     color: '#999',
   },
-  priority: {
+  reasonList: {
+    marginTop: 8,
+  },
+  reasonItem: {
+    fontSize: 12,
+    color: '#444',
+    marginBottom: 4,
+  },
+  breakdownButton: {
+    marginTop: 8,
+    alignSelf: 'flex-start',
+  },
+  breakdownText: {
     fontSize: 12,
     color: '#007AFF',
     fontWeight: '600',

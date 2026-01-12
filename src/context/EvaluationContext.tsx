@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { EvaluationStatus, EvaluationType } from '../types/DomainTypes';
 
 export interface Evaluation {
   id: string;
   classId: string;
   title: string;
-  type: 'exam' | 'assignment' | 'project' | 'quiz';
-  date: Date;
-  weight: number;
-  score?: number;
-  maxScore?: number;
+  type: EvaluationType;
+  dueDate: Date;
+  weightPercent: number;
+  status: EvaluationStatus;
+  gradeReceived?: number;
   notes?: string;
 }
 
@@ -59,7 +60,7 @@ export const EvaluationProvider: React.FC<EvaluationProviderProps> = ({ children
   const calculateClassGrade = (classId: string): number | null => {
     const classEvals = getEvaluationsByClass(classId);
     const gradedEvals = classEvals.filter(
-      (eval) => eval.score !== undefined && eval.maxScore !== undefined
+      (eval) => eval.gradeReceived !== undefined
     );
 
     if (gradedEvals.length === 0) return null;
@@ -68,9 +69,9 @@ export const EvaluationProvider: React.FC<EvaluationProviderProps> = ({ children
     let totalWeight = 0;
 
     gradedEvals.forEach((eval) => {
-      const percentage = ((eval.score ?? 0) / (eval.maxScore ?? 1)) * 100;
-      totalWeightedScore += percentage * eval.weight;
-      totalWeight += eval.weight;
+      const percentage = eval.gradeReceived ?? 0;
+      totalWeightedScore += percentage * eval.weightPercent;
+      totalWeight += eval.weightPercent;
     });
 
     if (totalWeight === 0) return null;

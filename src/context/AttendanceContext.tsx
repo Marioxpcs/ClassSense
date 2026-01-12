@@ -1,10 +1,11 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { AttendanceStatus } from '../types/DomainTypes';
 
 export interface AttendanceRecord {
   id: string;
   classId: string;
   date: Date;
-  status: 'present' | 'absent' | 'excused';
+  status: AttendanceStatus;
   notes?: string;
 }
 
@@ -57,7 +58,7 @@ export const AttendanceProvider: React.FC<AttendanceProviderProps> = ({ children
     if (classRecords.length === 0) return 100;
 
     const presentCount = classRecords.filter(
-      (rec) => rec.status === 'present' || rec.status === 'excused'
+      (rec) => rec.status === 'attended' || rec.status === 'recording'
     ).length;
 
     return Math.round((presentCount / classRecords.length) * 100);

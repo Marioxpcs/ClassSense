@@ -1,53 +1,28 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, Text, StyleSheet, ScrollView, SafeAreaView } from 'react-native';
-
-interface ScheduleItem {
-  id: string;
-  day: string;
-  time: string;
-  className: string;
-  room: string;
-}
+import { courses, sessions } from '../utils/seedData';
 
 const ScheduleScreen: React.FC = () => {
-  const mockSchedule: ScheduleItem[] = [
-    {
-      id: '1',
-      day: 'Monday',
-      time: '10:00 AM - 11:00 AM',
-      className: 'CS101',
-      room: 'Engineering 204',
-    },
-    {
-      id: '2',
-      day: 'Monday',
-      time: '2:00 PM - 3:30 PM',
-      className: 'MATH201',
-      room: 'Science 101',
-    },
-    {
-      id: '3',
-      day: 'Wednesday',
-      time: '10:00 AM - 11:00 AM',
-      className: 'CS101',
-      room: 'Engineering 204',
-    },
-    {
-      id: '4',
-      day: 'Friday',
-      time: '10:00 AM - 11:00 AM',
-      className: 'CS101',
-      room: 'Engineering 204',
-    },
-  ];
+  const groupedSchedule = useMemo(() => {
+    return sessions.reduce((acc, session) => {
+      const day = session.date.toLocaleDateString('en-US', { weekday: 'long' });
+      const course = courses.find((item) => item.id === session.courseId);
+      const label = course?.code ?? course?.name ?? 'Course';
+      const entry = {
+        id: session.id,
+        day,
+        time: `${session.startTime} - ${session.endTime}`,
+        className: label,
+        room: session.location ?? course?.location ?? 'TBD',
+      };
 
-  const groupedSchedule = mockSchedule.reduce((acc, item) => {
-    if (!acc[item.day]) {
-      acc[item.day] = [];
-    }
-    acc[item.day].push(item);
-    return acc;
-  }, {} as Record<string, ScheduleItem[]>);
+      if (!acc[day]) {
+        acc[day] = [];
+      }
+      acc[day].push(entry);
+      return acc;
+    }, {} as Record<string, { id: string; day: string; time: string; className: string; room: string }[]>);
+  }, []);
 
   const daysOfWeek = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 

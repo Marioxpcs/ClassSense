@@ -1,23 +1,12 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-
-export interface Class {
-  id: string;
-  name: string;
-  code: string;
-  instructor: string;
-  credits: number;
-  room?: string;
-  schedule?: string;
-  description?: string;
-  priority?: number;
-}
+import { Course } from '../types/DomainTypes';
 
 interface ClassContextType {
-  classes: Class[];
-  addClass: (classData: Class) => void;
-  updateClass: (id: string, classData: Partial<Class>) => void;
+  classes: Course[];
+  addClass: (classData: Course) => void;
+  updateClass: (id: string, classData: Partial<Course>) => void;
   deleteClass: (id: string) => void;
-  getClassById: (id: string) => Class | undefined;
+  getClassById: (id: string) => Course | undefined;
 }
 
 const ClassContext = createContext<ClassContextType | undefined>(undefined);
@@ -35,13 +24,13 @@ interface ClassProviderProps {
 }
 
 export const ClassProvider: React.FC<ClassProviderProps> = ({ children }) => {
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<Course[]>([]);
 
-  const addClass = (classData: Class) => {
+  const addClass = (classData: Course) => {
     setClasses((prev) => [...prev, classData]);
   };
 
-  const updateClass = (id: string, classData: Partial<Class>) => {
+  const updateClass = (id: string, classData: Partial<Course>) => {
     setClasses((prev) =>
       prev.map((cls) => (cls.id === id ? { ...cls, ...classData } : cls))
     );
@@ -51,7 +40,7 @@ export const ClassProvider: React.FC<ClassProviderProps> = ({ children }) => {
     setClasses((prev) => prev.filter((cls) => cls.id !== id));
   };
 
-  const getClassById = (id: string): Class | undefined => {
+  const getClassById = (id: string): Course | undefined => {
     return classes.find((cls) => cls.id === id);
   };
 
